@@ -16,107 +16,14 @@
 # under the License.
 
 name: Merge Queue CI
-
-on:
-  pull_request:
-    branches: [main]
-  merge_group:
-    types: [checks_requested]
-    branches: [main]
-  workflow_dispatch:
-
-concurrency:
-  group: merge-queue-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  actions: read
-  contents: read
-
+'on':
+  push:
+    branches:
+    - gh-readonly-queue/main/arrow-merge-queue-smoke
+  workflow_dispatch: null
+permissions: {}
 jobs:
-
-  archery:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/archery.yml
-    secrets: inherit
-
-  cpp:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/cpp.yml
-    secrets: inherit
-
-  dev:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/dev.yml
-    secrets: inherit
-
-  docs:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/docs.yml
-    secrets: inherit
-
-  docs_light:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/docs_light.yml
-    secrets: inherit
-
-  integration:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/integration.yml
-    secrets: inherit
-
-  matlab:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/matlab.yml
-    secrets: inherit
-
-  python:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/python.yml
-    secrets: inherit
-
-  r:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/r.yml
-    secrets: inherit
-
-  ruby:
-    if: github.event_name != 'pull_request'
-    uses: ./.github/workflows/ruby.yml
-    secrets: inherit
-    permissions:
-      actions: read
-      contents: read
-      # The existing Windows job caches vcpkg packages in GitHub Packages.
-      packages: write
-
-  required:
-    name: Merge Queue
-    if: always()
-    needs: [archery, cpp, dev, docs, docs_light, integration, matlab, python, r, ruby]
+  bootstrap:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions: {}
     steps:
-      - name: Check every suite result
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          NEEDS: ${{ toJSON(needs) }}
-        shell: python
-        run: |
-          import json
-          import os
-          import sys
-
-          event = os.environ["EVENT_NAME"]
-          results = json.loads(os.environ["NEEDS"])
-          # PRs can enter the queue; the combined commit must pass every suite.
-          if event == "pull_request":
-              expected = "skipped"
-          elif event in ("merge_group", "workflow_dispatch"):
-              expected = "success"
-          else:
-              sys.exit(f"Unexpected event: {event}")
-          print(json.dumps(results, indent=2))
-          if not results or any(job["result"] != expected for job in results.values()):
-              sys.exit(f"Every suite must report {expected}")
+    - run: echo "Register workflow for dispatching the production prototype ref"

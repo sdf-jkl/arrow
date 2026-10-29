@@ -1,0 +1,127 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: Merge queue gate smoke tests (fork only)
+'on':
+  push:
+    branches:
+    - gh-readonly-queue/main/arrow-merge-queue-smoke
+permissions: {}
+jobs:
+  passing:
+    runs-on: ubuntu-latest
+    steps:
+    - run: exit 0
+  failing:
+    runs-on: ubuntu-latest
+    steps:
+    - run: exit 1
+  skipped:
+    if: 'false'
+    runs-on: ubuntu-latest
+    steps:
+    - run: exit 0
+  all_success:
+    name: all_success
+    if: always()
+    needs:
+    - passing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+    - name: Check every suite result
+      env:
+        EVENT_NAME: merge_group
+        NEEDS: ${{ toJSON(needs) }}
+      shell: python
+      run: "import json\nimport os\nimport sys\n\nevent = os.environ[\"EVENT_NAME\"\
+        ]\nresults = json.loads(os.environ[\"NEEDS\"])\n# PRs can enter the queue;\
+        \ the combined commit must pass every suite.\nif event == \"pull_request\"\
+        :\n    expected = \"skipped\"\nelif event in (\"merge_group\", \"workflow_dispatch\"\
+        ):\n    expected = \"success\"\nelse:\n    sys.exit(f\"Unexpected event: {event}\"\
+        )\nprint(json.dumps(results, indent=2))\nif not results or any(job[\"result\"\
+        ] != expected for job in results.values()):\n    sys.exit(f\"Every suite must\
+        \ report {expected}\")\n"
+  failed_suite:
+    name: failed_suite
+    if: always()
+    needs:
+    - passing
+    - failing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+    - name: Check every suite result
+      env:
+        EVENT_NAME: merge_group
+        NEEDS: ${{ toJSON(needs) }}
+      shell: python
+      run: "import json\nimport os\nimport sys\n\nevent = os.environ[\"EVENT_NAME\"\
+        ]\nresults = json.loads(os.environ[\"NEEDS\"])\n# PRs can enter the queue;\
+        \ the combined commit must pass every suite.\nif event == \"pull_request\"\
+        :\n    expected = \"skipped\"\nelif event in (\"merge_group\", \"workflow_dispatch\"\
+        ):\n    expected = \"success\"\nelse:\n    sys.exit(f\"Unexpected event: {event}\"\
+        )\nprint(json.dumps(results, indent=2))\nif not results or any(job[\"result\"\
+        ] != expected for job in results.values()):\n    sys.exit(f\"Every suite must\
+        \ report {expected}\")\n"
+  skipped_suite:
+    name: skipped_suite
+    if: always()
+    needs:
+    - passing
+    - skipped
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+    - name: Check every suite result
+      env:
+        EVENT_NAME: merge_group
+        NEEDS: ${{ toJSON(needs) }}
+      shell: python
+      run: "import json\nimport os\nimport sys\n\nevent = os.environ[\"EVENT_NAME\"\
+        ]\nresults = json.loads(os.environ[\"NEEDS\"])\n# PRs can enter the queue;\
+        \ the combined commit must pass every suite.\nif event == \"pull_request\"\
+        :\n    expected = \"skipped\"\nelif event in (\"merge_group\", \"workflow_dispatch\"\
+        ):\n    expected = \"success\"\nelse:\n    sys.exit(f\"Unexpected event: {event}\"\
+        )\nprint(json.dumps(results, indent=2))\nif not results or any(job[\"result\"\
+        ] != expected for job in results.values()):\n    sys.exit(f\"Every suite must\
+        \ report {expected}\")\n"
+  pr_eligibility:
+    name: pr_eligibility
+    if: always()
+    needs:
+    - skipped
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+    - name: Check every suite result
+      env:
+        EVENT_NAME: pull_request
+        NEEDS: ${{ toJSON(needs) }}
+      shell: python
+      run: "import json\nimport os\nimport sys\n\nevent = os.environ[\"EVENT_NAME\"\
+        ]\nresults = json.loads(os.environ[\"NEEDS\"])\n# PRs can enter the queue;\
+        \ the combined commit must pass every suite.\nif event == \"pull_request\"\
+        :\n    expected = \"skipped\"\nelif event in (\"merge_group\", \"workflow_dispatch\"\
+        ):\n    expected = \"success\"\nelse:\n    sys.exit(f\"Unexpected event: {event}\"\
+        )\nprint(json.dumps(results, indent=2))\nif not results or any(job[\"result\"\
+        ] != expected for job in results.values()):\n    sys.exit(f\"Every suite must\
+        \ report {expected}\")\n"
